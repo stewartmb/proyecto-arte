@@ -1,73 +1,72 @@
-def aplicar_gravedad(circulo1, circulo2, G=1):
-    # Vector desde circulo1 a circulo2
-    direccion = circulo2.posicion - circulo1.posicion
-    distancia = direccion.length()
-
-    if distancia == 0:
-        return  # Evitar división por cero
-
-    # Normalizar dirección
-    direccion_normalizada = direccion.normalize()
-
-    # Calcular fuerza de gravedad (modificada)
-    aceleracion_magnitud = G * circulo1.masa / (distancia)
-
-    # Vector aceleración hacia circulo2
-    aceleracion = direccion_normalizada * aceleracion_magnitud
-
-    # Actualizar velocidad sumando la aceleración
-    circulo1.velocidad += aceleracion
+from math import sqrt
+from pygame.math import Vector2
 
 def aplicar_resorte(circulo1, circulo2, k=0.1, longitud_reposo=100):
-    # Vector desde circulo1 a circulo2
     direccion = circulo2.posicion - circulo1.posicion
     distancia = direccion.length()
 
     if distancia == 0:
-        return  # Evitar división por cero
-
-    # Calcular elongación: diferencia entre distancia actual y la de reposo
-    elongacion = distancia - longitud_reposo
-
-    # Dirección normalizada del resorte
-    direccion_normalizada = direccion.normalize()
-
-    # Fuerza de resorte según la ley de Hooke: F = -k * elongación
-    fuerza = direccion_normalizada * (k * elongacion)
-
-    # Suponemos masa=1 para simplificar: aceleración = fuerza / masa
-    circulo1.velocidad += fuerza
-
-def aplicar_resorte_con_amortiguamiento(circulo1, circulo2, k=0.1, longitud_reposo=100, b=0.05, max_range=1000):
-    # Vector desde circulo1 a circulo2
-    direccion = circulo2.posicion - circulo1.posicion
-    distancia = direccion.length()
-
-    if distancia > max_range:
         return
 
-    if distancia == 0:
-        return  # Evitar división por cero
-
-    # Dirección normalizada
-    direccion_normalizada = direccion.normalize()
-
-    # === Fuerza del resorte ===
     elongacion = distancia - longitud_reposo
-    fuerza_resorte = direccion_normalizada * (k * elongacion)
+    direccion_normalizada = direccion.normalize()
+    fuerza = direccion_normalizada * (k * elongacion)
+    circulo1.velocidad += fuerza
 
-    # === Fuerza de amortiguamiento ===
-    # Velocidad relativa entre los dos objetos
-    velocidad_relativa = circulo1.velocidad - circulo2.velocidad
+# def aplicar_gravedad(circulo1, circulo2, G=1):
+#     direccion = circulo2.posicion - circulo1.posicion
+#     distancia = direccion.length()
 
-    # Proyección de la velocidad relativa en la dirección del resorte
-    velocidad_en_direccion = velocidad_relativa.dot(direccion_normalizada)
+#     if distancia < 5:
+#         return
 
-    # Fuerza amortiguadora (opuesta a la dirección del movimiento relativo)
-    fuerza_amortiguamiento = -b * velocidad_en_direccion * direccion_normalizada
+#     fuerza_magnitud = G * circulo1.masa * circulo2.masa / (distancia**2)
+#     circulo1.velocidad += direccion.normalize() * fuerza_magnitud / circulo1.masa
+def aplicar_gravedad(circulo1, circulo2, G=0.5):
+    if circulo1.es_principal and circulo2.es_principal:
+        return
+    
+    direccion = circulo2.posicion - circulo1.posicion
+    distancia = max(direccion.length(), 10)  # Evitar división por cero
+    
+    fuerza = direccion.normalize() * (G * circulo1.masa * circulo2.masa / (distancia**2))
+    
+    if not circulo1.es_principal:
+        circulo1.velocidad += fuerza / circulo1.masa
+    if not circulo2.es_principal:
+        circulo2.velocidad -= fuerza / circulo2.masa
 
-    # === Fuerza total ===
+def aplicar_resorte_con_amortiguamiento(circulo1, circulo2, k=0.1, longitud_reposo=100, b=0.05, max_range=250):
+    direccion = circulo2.posicion - circulo1.posicion
+    distancia = direccion.length()
+
+    if distancia > max_range or distancia == 0:
+        return
+
+    direccion_normalizada = direccion.normalize()
+    fuerza_resorte = direccion_normalizada * (k * (distancia - longitud_reposo))
+    
+    velocidad_relativa = circulo2.velocidad - circulo1.velocidad
+    fuerza_amortiguamiento = b * velocidad_relativa.dot(direccion_normalizada) * direccion_normalizada
+
     fuerza_total = fuerza_resorte + fuerza_amortiguamiento
+    circulo1.velocidad += fuerza_total / circulo1.masa
+    circulo2.velocidad -= fuerza_total / circulo2.masa
 
-    # Suponemos masa = 1, o podrías dividir por la masa si lo deseas
-    circulo1.velocidad += fuerza_total
+    if distancia < longitud_reposo * 1.2:
+        tiempo_incremento = 0.1
+        circulo1.amigos[circulo2.id] = circulo1.amigos.get(circulo2.id, 0) + tiempo_incremento
+        circulo2.amigos[circulo1.id] = circulo2.amigos.get(circulo1.id, 0) + tiempo_incremento
+
+        peso = min(0.5, tiempo_incremento * 0.1)
+        for circ in [circulo1, circulo2]:
+            amigo = circulo2 if circ == circulo1 else circulo1
+            circ.color_actual = tuple(
+                int(circ.color_original[i] * (1-peso) + amigo.color_original[i] * peso)
+                for i in range(3)
+            )
+def aplicar_interaccion(circulo1, circulo2, umbral=50):
+    distancia = (circulo2.posicion - circulo1.posicion).length()
+    if distancia < umbral:
+        circulo1.contaminar(circulo2)
+        circulo2.contaminar(circulo1)
