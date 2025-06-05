@@ -7,7 +7,6 @@ def aplicar_resorte(circulo1, circulo2, k=0.1, longitud_reposo=100):
 
     if distancia == 0:
         return
-
     elongacion = distancia - longitud_reposo
     direccion_normalizada = direccion.normalize()
     fuerza = direccion_normalizada * (k * elongacion)
@@ -65,6 +64,7 @@ def aplicar_resorte_con_amortiguamiento(circulo1, circulo2, k=0.1, longitud_repo
                 int(circ.color_original[i] * (1-peso) + amigo.color_original[i] * peso)
                 for i in range(3)
             )
+
 def aplicar_interaccion(circulo1, circulo2, umbral=50):
     distancia = (circulo2.posicion - circulo1.posicion).length()
     if distancia < umbral:
