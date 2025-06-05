@@ -34,7 +34,6 @@ def aplicar_gravedad(circulo1, circulo2, G=0.5):
         circulo1.velocidad += fuerza / circulo1.masa
     if not circulo2.es_principal:
         circulo2.velocidad -= fuerza / circulo2.masa
-
 def aplicar_resorte_con_amortiguamiento(circulo1, circulo2, k=0.1, longitud_reposo=100, b=0.05, max_range=250):
     direccion = circulo2.posicion - circulo1.posicion
     distancia = direccion.length()
@@ -52,19 +51,17 @@ def aplicar_resorte_con_amortiguamiento(circulo1, circulo2, k=0.1, longitud_repo
     circulo1.velocidad += fuerza_total / circulo1.masa
     circulo2.velocidad -= fuerza_total / circulo2.masa
 
+    # Eliminar la parte que usa 'amigos' ya que no es necesaria para la física
     if distancia < longitud_reposo * 1.2:
-        tiempo_incremento = 0.1
-        circulo1.amigos[circulo2.id] = circulo1.amigos.get(circulo2.id, 0) + tiempo_incremento
-        circulo2.amigos[circulo1.id] = circulo2.amigos.get(circulo1.id, 0) + tiempo_incremento
-
-        peso = min(0.5, tiempo_incremento * 0.1)
-        for circ in [circulo1, circulo2]:
-            amigo = circulo2 if circ == circulo1 else circulo1
-            circ.color_actual = tuple(
-                int(circ.color_original[i] * (1-peso) + amigo.color_original[i] * peso)
-                for i in range(3)
-            )
-
+        # Solo mezcla de colores si están cerca
+        peso = min(0.5, 0.1 * 0.1)  # Pequeño factor fijo para mezcla
+        if not circulo1.es_principal and not circulo2.es_principal:
+            for circ in [circulo1, circulo2]:
+                amigo = circulo2 if circ == circulo1 else circulo1
+                circ.color_actual = tuple(
+                    int(circ.color_original[i] * (1-peso) + amigo.color_original[i] * peso)
+                    for i in range(3)
+                )
 def aplicar_interaccion(circulo1, circulo2, umbral=50):
     distancia = (circulo2.posicion - circulo1.posicion).length()
     if distancia < umbral:
